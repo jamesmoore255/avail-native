@@ -97,7 +97,7 @@ class HomeBodyState extends State<HomeBody> {
                       List<Widget> subsections = <Widget>[
                         Padding(
                           padding: EdgeInsets.all(8),
-                          child: Text(testDoc["title"]),
+                          child: Text(testDoc["title"], style: Theme.of(context).textTheme.subhead),
                         ),
                         Padding(
                           padding: EdgeInsets.all(8),

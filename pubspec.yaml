@@ -55,6 +55,9 @@ flutter:
   # https://flutter.dev/assets-and-images/#from-packages
 
   fonts:
+    - family: Frank Ruhl Libre
+      fonts:
+        - asset: assets/fonts/FrankRuhlLibre-Regular.ttf
     - family: Montserrat
       fonts:
         - asset: assets/fonts/Montserrat-Regular.ttf

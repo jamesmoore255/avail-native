@@ -2,7 +2,6 @@ import "dart:ui";
 
 import "package:avail/shared/filter-chip-bar.dart";
 import "package:avail/shared/menu-drawer.dart";
-import "package:avail/shared/text-styles.dart";
 import "package:flutter/cupertino.dart";
 import "package:flutter/material.dart";
 import "package:cloud_firestore/cloud_firestore.dart";
@@ -10,54 +9,18 @@ import "package:flutter/painting.dart";
 
 final databaseReference = Firestore.instance;
 
-//class ScriptFeaturedCard extends StatelessWidget {
-//  ScriptFeaturedCard({
-//    Key key,
-//    @required this.title,
-//    @required this.slug,
-//    this.media,
-//    this.height = 256,
-//  }) : super(key: key);
-//  final String title;
-//  final String slug;
-//  final Object media;
-//
-//  final double height;
-//
-//  @override
-//  Widget build(BuildContext context) {
-//    return Card(
-//        child: Container(
-//      height: 100,
-//      child: Stack(
-//        fit: StackFit.expand,
-//        children: <Widget>[
-//          Positioned(
-//            left: 0,
-//            top: 0,
-//            child: Text(title),
-//          )
-//        ],
-//      ),
-//    ));
-//  }
-//}
+class ScriptPage extends StatefulWidget {
+  _ScriptPageState createState() => _ScriptPageState();
+}
 
-class ScriptSecondaryCard extends StatelessWidget {
-  ScriptSecondaryCard({
-    Key key,
-    @required this.title,
-    this.media,
-    this.duration = 0,
-    this.hits = 0,
-  }) : super(key: key);
-  final String title;
-  final media;
-  final duration;
-  final hits;
+class _ScriptPageState extends State<ScriptPage> {
+  final scriptDoc = databaseReference.collection("script");
+  final _bookmarks = Set();
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildScriptSecondaryRow(String id, String title, Map media,
+      int duration, int hits, bool bookmarked) {
+    final bool _isBookmarked = _bookmarks.contains(id);
+
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         return Card(
@@ -70,13 +33,41 @@ class ScriptSecondaryCard extends StatelessWidget {
                 ),
                 child: Row(children: <Widget>[
                   Expanded(
-                    // Implement a stack, to put the bookmark in the bottom left corner
-                    child: Column(
+                    child: Stack(children: <Widget>[
+                      Positioned(
+                          bottom: -8,
+                          right: 0,
+                          child: IconButton(
+                              alignment: Alignment.bottomCenter,
+                              icon: Icon(
+                                  _isBookmarked
+                                      ? Icons.bookmark
+                                      : Icons.bookmark_border,
+                                  size: 36),
+                              onPressed: () {
+                                setState(() {
+                                  if (_isBookmarked) {
+                                    _bookmarks.remove(id);
+
+                                    /// UPDATE USER BOOKMARKS ON FIREBASE DOC
+                                  } else {
+                                    _bookmarks.add(id);
+
+                                    /// UPDATE USER BOOKMARKS ON FIREBASE DOC
+                                  }
+                                });
+                              })),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
+                          Spacer(),
                           // Secondary headline
                           Container(
-                              child: Text(title, style: secondaryHeadline)),
+                              child: Text(
+                            title,
+                            style: Theme.of(context).textTheme.subhead,
+                          )),
                           // Slug
 //                          Padding(
 //                              padding: EdgeInsets.only(left: 8, right: 8),
@@ -84,7 +75,7 @@ class ScriptSecondaryCard extends StatelessWidget {
 //                                  overflow: TextOverflow.visible,
 //                                  softWrap: true,
 //                                  maxLines: 4)),
-                          Spacer(),
+                          Spacer(flex: 2),
                           Row(
                             children: <Widget>[
                               Container(
@@ -92,8 +83,11 @@ class ScriptSecondaryCard extends StatelessWidget {
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: <Widget>[
-                                    Text("${hits / 1000}k"),
-                                    Icon(Icons.show_chart),
+                                    Text("${hits / 1000}k",
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .overline),
+                                    Icon(Icons.show_chart, size: 12),
                                   ],
                                 ),
                               ),
@@ -102,14 +96,20 @@ class ScriptSecondaryCard extends StatelessWidget {
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: <Widget>[
-                                    Text("${duration}min"),
-                                    Container(child: Icon(Icons.timelapse)),
+                                    Text("${duration}min",
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .overline),
+                                    Container(
+                                        child: Icon(Icons.timelapse, size: 12)),
                                   ],
                                 ),
                               ),
                             ],
                           )
-                        ]),
+                        ],
+                      )
+                    ]),
                   ),
                   media != null && media["url"] != null
                       ? Container(
@@ -130,13 +130,7 @@ class ScriptSecondaryCard extends StatelessWidget {
       },
     );
   }
-}
 
-class ScriptPage extends StatefulWidget {
-  _ScriptPageState createState() => _ScriptPageState();
-}
-
-class _ScriptPageState extends State<ScriptPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -160,7 +154,7 @@ class _ScriptPageState extends State<ScriptPage> {
                     size: 32,
                   ),
                   onPressed: () {
-                    print("FAB Pressed");
+                    Navigator.pushNamed(context, "/script/create");
                   },
                 ))),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -189,11 +183,13 @@ class _ScriptPageState extends State<ScriptPage> {
 //                            if (scriptDocument["featured"] == true) {
 //                              return ScriptFeaturedCard();
 //                            }
-                          return ScriptSecondaryCard(
-                            title: scriptDocument["title"],
-                            media: scriptDocument["media"],
-                            duration: scriptDocument["duration"], // in minutes
-                            hits: scriptDocument["hits"],
+                          return _buildScriptSecondaryRow(
+                            scriptDocument.documentID,
+                            scriptDocument["title"],
+                            scriptDocument["media"],
+                            scriptDocument["duration"], // in minutes
+                            scriptDocument["hits"],
+                            scriptDocument["bookmarked"],
                           );
                         });
                   }),
