@@ -10,13 +10,13 @@ final databaseReference = Firestore.instance;
 class ScriptCreatePage extends StatefulWidget {
   ScriptCreatePage({
     Key key,
-    this.user = "testinguserid",
+    this.user,
 
     /// @required
     this.signedIn = true,
 
     /// @required
-    this.id = "3rbQqJ1ZzH1Q93BA06ke",
+    this.id,
   }) : super(key: key);
 
   /// FirebaseUser type
@@ -32,6 +32,7 @@ class _ScriptCreatePageState extends State<ScriptCreatePage> {
   DocumentReference scriptRef =
       databaseReference.collection("script").document();
   Map<String, dynamic> scriptData;
+  String documentId;
 
   void getDocument(String type, String id) async {
     try {
@@ -47,72 +48,96 @@ class _ScriptCreatePageState extends State<ScriptCreatePage> {
     }
   }
 
+  void createDocument(String type) async {
+    try {
+      scriptRef = databaseReference.collection(type).document();
+      await scriptRef.setData({
+        "backup": false,
+        "created": FieldValue.serverTimestamp(),
+        "hits": 0,
+        "user": widget.user,
+        "updated": FieldValue.serverTimestamp(),
+      });
+      documentId = scriptRef.documentID;
+    } catch (error) {
+      print(error.message);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    print(widget.id);
     if (widget.id != null) {
-      getDocument("script", widget.id);
+      documentId = widget.id;
+      getDocument("script", documentId);
+    } else {
+      createDocument("script");
     }
     return Scaffold(
-        drawer: Drawer(),
-        body: Column(
-          children: <Widget>[
-            // Custom top app bar, small menu with chip bar
-            SafeArea(
-              child: Stack(
-                children: <Widget>[
-                  ChipBar(),
-                  MenuDrawer(),
-                ],
-              ),
+      drawer: Drawer(),
+      body: Column(
+        children: <Widget>[
+          // Custom top app bar, small menu with chip bar
+          SafeArea(
+            child: Stack(
+              children: <Widget>[
+                ChipBar(),
+                MenuDrawer(),
+              ],
             ),
-            Container(
-              margin: EdgeInsets.only(right: 16, left: 16),
-              child: Column(
-                children: <Widget>[
-                  TextField(
-                    controller: TextEditingController()
-                      ..text = scriptData != null && scriptData["title"] != null
-                          ? scriptData["title"]
-                          : "",
-                    maxLines: null,
-                    maxLength: 45,
-                    style: Theme.of(context).textTheme.display1,
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: "Title...",
-                    ),
-                    onChanged: (String title) {
-//                      title = _title;
-//                      Object _set = _scriptDoc.document().setData({
-//                        "title": title,
-//                        "user": widget.user,
-//                        "draft": true,
-//                      }, merge: true);
-                    },
+          ),
+          Container(
+            margin: EdgeInsets.only(right: 16, left: 16),
+            child: Column(
+              children: <Widget>[
+                TextField(
+                  controller: TextEditingController()
+                    ..text = scriptData != null && scriptData["title"] != null
+                        ? scriptData["title"]
+                        : "",
+                  maxLines: null,
+                  maxLength: 100,
+                  style: Theme.of(context).textTheme.display1,
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: "Title...",
                   ),
-                  TextField(
-                    controller: TextEditingController()
-                      ..text = scriptData != null && scriptData["body"] != null
-                          ? scriptData["body"]
-                          : "",
-                    maxLines: null,
-                    style: Theme.of(context).textTheme.body1,
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: "Write to avail...",
-                    ),
-                    onChanged: (String body) {
-//                      _scriptDoc.document().setData({
-//                        "body": body,
-//                        "user": widget.user,
-//                        "draft": true,
-//                      }, merge: true);
-                    },
-                  )
-                ],
-              ),
-            )
-          ],
-        ));
+                  onChanged: (String title) {
+                    scriptRef.setData({
+                      "title": title,
+                      "backup": false,
+                      "user": widget.user,
+                      "draft": true,
+                      "updated": FieldValue.serverTimestamp(),
+                    }, merge: true);
+                  },
+                ),
+                TextField(
+                  controller: TextEditingController()
+                    ..text = scriptData != null && scriptData["body"] != null
+                        ? scriptData["body"]
+                        : "",
+                  maxLines: null,
+                  style: Theme.of(context).textTheme.body1,
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: "Write to avail...",
+                  ),
+                  onChanged: (String body) {
+                    scriptRef.setData({
+                      "backup": false,
+                      "body": body,
+                      "draft": true,
+                      "user": widget.user,
+                      "updated": FieldValue.serverTimestamp(),
+                    }, merge: true);
+                  },
+                )
+              ],
+            ),
+          )
+        ],
+      ),
+    );
   }
 }

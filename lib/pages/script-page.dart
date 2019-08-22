@@ -24,26 +24,29 @@ class _ScriptPageState extends State<ScriptPage> {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         return Card(
-            elevation: 0,
-            child: Container(
-                margin: EdgeInsets.all(8),
-                constraints: BoxConstraints(
-                  minHeight: 60,
-                  maxHeight: 110,
-                ),
-                child: Row(children: <Widget>[
-                  Expanded(
-                    child: Stack(children: <Widget>[
+          elevation: 0,
+          child: Container(
+            margin: EdgeInsets.all(8),
+            constraints: BoxConstraints(
+              minHeight: 60,
+              maxHeight: 110,
+            ),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Stack(
+                    children: <Widget>[
                       Positioned(
                           bottom: -8,
                           right: 0,
                           child: IconButton(
                               alignment: Alignment.bottomCenter,
                               icon: Icon(
-                                  _isBookmarked
-                                      ? Icons.bookmark
-                                      : Icons.bookmark_border,
-                                  size: 36),
+                                _isBookmarked
+                                    ? Icons.bookmark
+                                    : Icons.bookmark_border,
+                                size: 36,
+                              ),
                               onPressed: () {
                                 setState(() {
                                   if (_isBookmarked) {
@@ -64,10 +67,11 @@ class _ScriptPageState extends State<ScriptPage> {
                           Spacer(),
                           // Secondary headline
                           Container(
-                              child: Text(
-                            title,
-                            style: Theme.of(context).textTheme.subhead,
-                          )),
+                            child: Text(
+                              title ?? "Title not defined",
+                              style: Theme.of(context).textTheme.subhead,
+                            ),
+                          ),
                           // Slug
 //                          Padding(
 //                              padding: EdgeInsets.only(left: 8, right: 8),
@@ -83,7 +87,7 @@ class _ScriptPageState extends State<ScriptPage> {
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: <Widget>[
-                                    Text("${hits / 1000}k",
+                                    Text("${hits ?? 0 / 1000}k",
                                         style: Theme.of(context)
                                             .textTheme
                                             .overline),
@@ -109,24 +113,28 @@ class _ScriptPageState extends State<ScriptPage> {
                           )
                         ],
                       )
-                    ]),
+                    ],
                   ),
-                  media != null && media["url"] != null
-                      ? Container(
-                          constraints: BoxConstraints(
-                              minWidth: constraints.minWidth / 4,
-                              maxWidth: constraints.maxWidth / 2 - 16,
-                              minHeight: constraints.minHeight),
-                          decoration: BoxDecoration(
-                            image: DecorationImage(
-                              image: NetworkImage(media["url"]),
-                              fit: BoxFit.cover,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
+                ),
+                media != null && media["url"] != null
+                    ? Container(
+                        constraints: BoxConstraints(
+                            minWidth: constraints.minWidth / 4,
+                            maxWidth: constraints.maxWidth / 2 - 16,
+                            minHeight: constraints.minHeight),
+                        decoration: BoxDecoration(
+                          image: DecorationImage(
+                            image: NetworkImage(media["url"]),
+                            fit: BoxFit.cover,
                           ),
-                        )
-                      : Container(width: 0),
-                ])));
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      )
+                    : Container(width: 0),
+              ],
+            ),
+          ),
+        );
       },
     );
   }
@@ -134,67 +142,80 @@ class _ScriptPageState extends State<ScriptPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        // Scripts Bottom Left FAB
-        floatingActionButton: Container(
-            constraints: BoxConstraints(
-              minHeight: 80,
-              maxHeight: 96,
-              minWidth: 80,
-              maxWidth: 96,
+      // Scripts Bottom Left FAB
+      floatingActionButton: Container(
+        constraints: BoxConstraints(
+          minHeight: 80,
+          maxHeight: 96,
+          minWidth: 80,
+          maxWidth: 96,
+        ),
+        child: Transform.translate(
+          offset: Offset(40, 40),
+          child: RawMaterialButton(
+            padding: EdgeInsets.only(right: 5, bottom: 10),
+            fillColor: Color(0xFF212121),
+            shape: CircleBorder(),
+            child: Icon(
+              Icons.note_add,
+              color: Color(0xFFFFFFFF),
+              size: 32,
             ),
-            child: Transform.translate(
-                offset: Offset(40, 40),
-                child: RawMaterialButton(
-                  padding: EdgeInsets.only(right: 5, bottom: 10),
-                  fillColor: Color(0xFF212121),
-                  shape: CircleBorder(),
-                  child: Icon(
-                    Icons.note_add,
-                    color: Color(0xFFFFFFFF),
-                    size: 32,
-                  ),
-                  onPressed: () {
-                    Navigator.pushNamed(context, "/script/create");
-                  },
-                ))),
-        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-        drawer: Drawer(),
-        body: Column(
-          children: <Widget>[
-            // Custom top app bar, small menu with chip bar
-            SafeArea(
-              child: Stack(
-                children: <Widget>[
-                  ChipBar(),
-                  MenuDrawer(),
-                ],
-              ),
+            onPressed: () {
+              Navigator.pushNamed(context, "/script/options");
+            },
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      drawer: Drawer(),
+      body: Column(
+        children: <Widget>[
+          // Custom top app bar, small menu with chip bar
+          SafeArea(
+            child: Stack(
+              children: <Widget>[
+                ChipBar(),
+                MenuDrawer(),
+              ],
             ),
-            Expanded(
-              child: StreamBuilder(
-                  stream: databaseReference.collection("script").snapshots(),
-                  builder: (BuildContext context, snapshot) {
-                    return ListView.builder(
-                        padding: EdgeInsets.all(16),
-                        itemCount: snapshot.data.documents.length,
-                        itemBuilder: (BuildContext context, int i) {
-                          DocumentSnapshot scriptDocument =
-                              snapshot.data.documents[i];
+          ),
+          Expanded(
+            child: StreamBuilder(
+              stream: databaseReference
+                  .collection("script")
+                  .orderBy("hits")
+                  .snapshots(),
+              builder: (BuildContext context, snapshot) {
+                if (snapshot.hasError) return Text('Error: ${snapshot.error}');
+                int totalDocs = snapshot?.data?.documents?.length ?? 0;
+                if (totalDocs == 0) {
+                  return Text('Loading...');
+                }
+                return ListView.builder(
+                  padding: EdgeInsets.all(16),
+                  itemCount: snapshot.data.documents.length,
+                  itemBuilder: (BuildContext context, int i) {
+                    DocumentSnapshot scriptDocument =
+                        snapshot.data.documents[i];
 //                            if (scriptDocument["featured"] == true) {
 //                              return ScriptFeaturedCard();
 //                            }
-                          return _buildScriptSecondaryRow(
-                            scriptDocument.documentID,
-                            scriptDocument["title"],
-                            scriptDocument["media"],
-                            scriptDocument["duration"], // in minutes
-                            scriptDocument["hits"],
-                            scriptDocument["bookmarked"],
-                          );
-                        });
-                  }),
+                    return _buildScriptSecondaryRow(
+                      scriptDocument.documentID,
+                      scriptDocument["title"],
+                      scriptDocument["media"],
+                      scriptDocument["duration"], // in minutes
+                      scriptDocument["hits"],
+                      scriptDocument["bookmarked"],
+                    );
+                  },
+                );
+              },
             ),
-          ],
-        ));
+          ),
+        ],
+      ),
+    );
   }
 }

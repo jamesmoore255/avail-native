@@ -38,7 +38,7 @@ class HomeBottomAppBarContents extends StatelessWidget {
           children: <Widget>[
             GestureDetector(
                 onTap: () {
-                  Scaffold.of(context).openDrawer();
+                  Navigator.pushNamed(context, "/auth");
                 },
                 child: CircleAvatar(backgroundColor: Color(0xFF484848))
             ),
