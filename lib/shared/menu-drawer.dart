@@ -34,7 +34,7 @@ class MenuDrawer extends StatelessWidget {
                     icon: Icon(Icons.arrow_back_ios),
                     color: Color(0xFFFAFAFA),
                     onPressed: () {
-                      Navigator.pushNamed(context, "/");
+                      Navigator.pop(context);
                     },
                   ),
                   Spacer(),
