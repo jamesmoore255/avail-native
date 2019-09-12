@@ -6,8 +6,11 @@ import 'package:avail/pages/script-create-page.dart';
 import "package:avail/pages/script-page.dart";
 import 'package:avail/pages/script-drafts-page.dart';
 import "package:avail/pages/sound-page.dart";
+import 'package:firebase_auth/firebase_auth.dart';
 import "package:flutter/cupertino.dart";
 import "package:flutter/material.dart";
+
+final FirebaseAuth _auth = FirebaseAuth.instance;
 
 void main() => runApp(MyApp());
 
@@ -17,6 +20,51 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  String language;
+  bool signedIn;
+  FirebaseUser user;
+  Map<String, dynamic> userData;
+
+  void _signOut() async {
+    await _auth.signOut();
+    print("signed out");
+    signedIn = false;
+    user = null;
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _authStateListener() async {
+    FirebaseAuth.instance.onAuthStateChanged.listen(
+      (FirebaseUser userObject) async {
+        signedIn = userObject != null ? true : false;
+        user = signedIn ? userObject : null;
+        setState(() {});
+        if (signedIn) {
+          getUserData();
+        }
+      },
+    );
+  }
+
+  void getUserData() async {
+    if (user.uid == null) {
+      return;
+    }
+    setState(() {});
+    // Implement user details updating
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    language = 'en';
+    signedIn = false;
+    userData = {};
+    _authStateListener();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -75,7 +123,12 @@ class _MyAppState extends State<MyApp> {
         /// Create multiple text themes for different styles
       ),
       routes: {
-        "/": (context) => HomePage(),
+        "/": (context) => HomePage(
+          user: user,
+          signedIn: signedIn,
+          signOut: _signOut,
+          userData: userData,
+        ),
         "/auth": (context) => AuthPage(),
         "/sound": (context) => SoundPage(),
         "/depiction": (context) => DepictionPage(),
