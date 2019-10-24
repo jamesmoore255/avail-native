@@ -142,7 +142,7 @@ class _ScriptPageState extends State<ScriptPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Scripts Bottom Left FAB
+      // Scripts Bottom right FAB
       floatingActionButton: Container(
         constraints: BoxConstraints(
           minHeight: 80,
@@ -151,15 +151,14 @@ class _ScriptPageState extends State<ScriptPage> {
           maxWidth: 96,
         ),
         child: Transform.translate(
-          offset: Offset(40, 40),
+          offset: Offset(30, 30),
           child: RawMaterialButton(
-            padding: EdgeInsets.only(right: 5, bottom: 10),
-            fillColor: Color(0xFF212121),
+            fillColor: Colors.grey.shade900,
             shape: CircleBorder(),
             child: Icon(
               Icons.note_add,
               color: Color(0xFFFFFFFF),
-              size: 32,
+              size: 40,
             ),
             onPressed: () {
               Navigator.pushNamed(context, "/script/options");

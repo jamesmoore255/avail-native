@@ -1,10 +1,10 @@
 import 'package:avail/pages/auth-page.dart';
 import "package:avail/pages/depiction-page.dart";
 import "package:avail/pages/home-page.dart";
-import 'package:avail/pages/script-create-options-page.dart';
-import 'package:avail/pages/script-create-page.dart';
-import "package:avail/pages/script-page.dart";
-import 'package:avail/pages/script-drafts-page.dart';
+import 'package:avail/pages/script/script-options-page.dart';
+import 'package:avail/pages/script/script-create-page.dart';
+import 'package:avail/pages/script/script-page.dart';
+import 'package:avail/pages/script/script-drafts-page.dart';
 import "package:avail/pages/sound-page.dart";
 import 'package:firebase_auth/firebase_auth.dart';
 import "package:flutter/cupertino.dart";
@@ -133,7 +133,12 @@ class _MyAppState extends State<MyApp> {
         "/sound": (context) => SoundPage(),
         "/depiction": (context) => DepictionPage(),
         "/script": (context) => ScriptPage(),
-        "/script/options": (context) => ScriptCreateOptionsPage(),
+        "/script/options": (context) => ScriptCreateOptionsPage(
+          user: user,
+          signedIn: signedIn,
+          signOut: _signOut,
+          userData: userData,
+        ),
         "/script/drafts": (context) => ScriptDraftsPage(),
         "/script/create": (context) => ScriptCreatePage(),
       },
