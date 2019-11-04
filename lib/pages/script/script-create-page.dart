@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:avail/helpers/uploadStorage.dart';
@@ -38,7 +39,6 @@ class ScriptCreatePage extends StatefulWidget {
 class _ScriptCreatePageState extends State<ScriptCreatePage> {
   DocumentReference _scriptRef;
   Map<String, dynamic> scriptData;
-  FocusNode _bodyFocusNode;
   FocusNode _titleFocusNode;
   List<Widget> _scriptStructure;
   Map<String, dynamic> _bodies;
@@ -49,7 +49,9 @@ class _ScriptCreatePageState extends State<ScriptCreatePage> {
   File _image;
   String _extension;
   String _contentType;
-  Map<String, dynamic> _metadata;
+  Map<String, String> _metadata;
+  Timer _updateTimer;
+  List<TextEditingController> _bodyControllers;
 
 //  File _addImage;
 
@@ -57,34 +59,19 @@ class _ScriptCreatePageState extends State<ScriptCreatePage> {
   void initState() {
     super.initState();
     _scriptStructure = [];
+    _bodyControllers = [];
     _titleFocusNode = FocusNode();
-    _bodyFocusNode = FocusNode();
     _lastText = false;
     _bodyIndex = 0;
     _bodies = {};
     _titleFocusNode.addListener(
-          () async {
+      () async {
         if (!_titleFocusNode.hasFocus) {
-          print("Title isn't focused");
           _scriptRef.setData({
             "title": _title,
             "backup": false,
-            "user": widget.user,
+            "user": widget.user.uid,
             "draft": true,
-            "updated": FieldValue.serverTimestamp(),
-          }, merge: true);
-        }
-      },
-    );
-    _bodyFocusNode.addListener(
-          () async {
-        if (!_bodyFocusNode.hasFocus) {
-          print("Body isn't focused");
-          _scriptRef.setData({
-            "backup": false,
-            "body": _bodies,
-            "draft": true,
-            "user": widget.user,
             "updated": FieldValue.serverTimestamp(),
           }, merge: true);
         }
@@ -96,10 +83,10 @@ class _ScriptCreatePageState extends State<ScriptCreatePage> {
   void dispose() {
     super.dispose();
     _titleFocusNode.dispose();
-    _bodyFocusNode.dispose();
+    for (TextEditingController _control in _bodyControllers) {
+      _control.dispose();
+    }
   }
-
-//  void titleUpdate() async {}
 
   void getDocument() async {
     try {
@@ -123,7 +110,7 @@ class _ScriptCreatePageState extends State<ScriptCreatePage> {
         "backup": false,
         "created": FieldValue.serverTimestamp(),
         "hits": 0,
-        "user": widget.user,
+        "uid": widget.user.uid,
         "updated": FieldValue.serverTimestamp(),
       });
     } catch (error) {
@@ -131,7 +118,28 @@ class _ScriptCreatePageState extends State<ScriptCreatePage> {
     }
   }
 
-  void addBody(int index, String type, [ImageSource source]) async {
+  void _updateCountdown() {
+    _updateTimer = new Timer(
+      Duration(seconds: 10),
+      () {
+        updateDocument();
+      },
+    );
+  }
+
+  void updateDocument() async {
+    _scriptRef.setData({
+      "backup": false,
+      "body": _bodies,
+      "draft": true,
+      "user": widget.user.uid,
+      "scriptStructure": _scriptStructure,
+      "updated": FieldValue.serverTimestamp(),
+    }, merge: true);
+  }
+
+  // This adds a body element, either image or text depending on what the user chooses.
+  void _addBody(String type, [ImageSource source]) async {
     switch (type) {
       case "image":
         _image = await ImagePicker.pickImage(source: source);
@@ -158,62 +166,143 @@ class _ScriptCreatePageState extends State<ScriptCreatePage> {
             return;
         }
         _metadata = {"name": p.basename(_image.path), "user": widget.user.uid};
-        upload(
+        String imageUrl = await upload(
           _image,
           "script/media",
-          "${widget.user.uid}_${FieldValue.serverTimestamp}_$index",
+          "${widget.user.uid}_${FieldValue.serverTimestamp}_$_bodyIndex",
           _contentType,
           _metadata,
         );
-//        _scriptStructure.add();
+        _scriptStructure.add(Padding(
+          padding: EdgeInsets.all(16),
+          child: SizedBox(
+              width: double.infinity,
+              child: Image.network(imageUrl, fit: BoxFit.contain)),
+        ));
+        _bodies[_bodyIndex.toString()] = {"type": "image", "value": imageUrl};
+        _lastText = false;
         break;
       case "text":
         _scriptStructure.add(
-          TextField(
-            controller: TextEditingController()
-              ..text = scriptData != null && scriptData["body"] != null
-                  ? scriptData["body"]
-                  : "",
-            maxLines: null,
-            style: Theme
-                .of(context)
-                .textTheme
-                .body1,
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              hintText: "Write to avail...",
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: TextField(
+              controller: TextEditingController(),
+              maxLines: null,
+              style: Theme.of(context).textTheme.body1,
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: "Write to avail...",
+              ),
+              onChanged: (String body) {
+                _bodies[_bodyIndex.toString()] = {
+                  "type": "text",
+                  "value": "body"
+                };
+                if (_updateTimer != null && !_updateTimer.isActive) {
+                  _updateCountdown();
+                }
+              },
+              autofocus: true,
             ),
-            onChanged: (String body) {
-              _bodies[index.toString()] = body;
-            },
-            focusNode: _bodyFocusNode,
-            autofocus: true,
           ),
         );
+        _lastText = true;
         break;
       default:
         return;
     }
-    _lastText = true;
     if (mounted) {
+      _bodyIndex++;
       setState(() {});
     }
   }
 
+  /// *** Add document processing, eg update body of said controller
+  _newTextEditingController([String _text]) {
+    TextEditingController _controller = TextEditingController();
+    if (_text != null) {
+      _controller..text = _text;
+    }
+    _bodyControllers.add(_controller);
+    return _controller;
+  }
+
+//  void _cameraPicker(BuildContext context) async {
+//    await showDialog(
+//        context: context,
+//        builder: (BuildContext context) {
+//          return SimpleDialog(
+//            children: <Widget>[
+//              FlatButton.icon(
+//                onPressed: () {
+//                  _addBody(_bodyIndex, "image", ImageSource.camera);
+//                },
+//                icon: Icon(Icons.camera),
+//                label: Text("CAMERA"),
+//              ),
+//              FlatButton.icon(
+//                onPressed: () {
+//                  _addBody(_bodyIndex, "image", ImageSource.gallery);
+//                },
+//                icon: Icon(Icons.image),
+//                label: Text("GALLERY"),
+//              )
+//            ],
+//          );
+//        });
+//  }
+
   void _addBodyBottomSheet(BuildContext context) {
     showModalBottomSheet(
+      elevation: 1,
       context: context,
       builder: (BuildContext context) {
         return ListView(
           children: <Widget>[
             ListTile(
-              leading: Icon(Icons.add_a_photo),
-              title: Text("Add a photo"),
+              leading: Icon(Icons.camera),
+              title: Text("Take a photo"),
+              onTap: () {
+                _addBody("image", ImageSource.camera);
+                Navigator.pop(context);
+              },
             ),
             ListTile(
-              leading: Icon(Icons.add_comment),
-              title: Text("Add some text"),
+              leading: Icon(Icons.image),
+              title: Text("Upload an image"),
+              onTap: () {
+                _addBody("image", ImageSource.gallery);
+                Navigator.pop(context);
+              },
             ),
+            _lastText
+                ? Container(height: 0)
+                : ListTile(
+                    leading: Icon(Icons.add_comment),
+                    title: Text("Add some text"),
+                    onTap: () {
+                      _addBody("text");
+                      Navigator.pop(context);
+                    },
+                  ),
+            ListTile(
+              leading: Icon(Icons.remove),
+              title: Text("Add a line break"),
+              onTap: () {
+                _scriptStructure.add(
+                  Container(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      height: 2,
+                      width: double.infinity,
+                      color: Colors.grey.shade500),
+                );
+                _bodies[_bodyIndex.toString()] = {"type": "line"};
+                _lastText = false;
+                _bodyIndex++;
+                Navigator.pop(context);
+              },
+            )
           ],
         );
       },
@@ -223,7 +312,6 @@ class _ScriptCreatePageState extends State<ScriptCreatePage> {
   @override
   Widget build(BuildContext context) {
     if (_documentId != null) {
-//      _documentId = widget.id;
       _scriptRef = databaseReference.collection("script").document(_documentId);
       getDocument();
     } else {
@@ -232,17 +320,14 @@ class _ScriptCreatePageState extends State<ScriptCreatePage> {
     if (_scriptStructure.length < 1) {
       _scriptStructure.add(
         TextField(
-          controller: TextEditingController()
+          controller: _newTextEditingController()
             ..text = scriptData != null && scriptData["title"] != null
                 ? scriptData["title"]
                 : "",
           maxLines: null,
           maxLength: 100,
           autofocus: true,
-          style: Theme
-              .of(context)
-              .textTheme
-              .display1,
+          style: Theme.of(context).textTheme.display1,
           decoration: InputDecoration(
             border: InputBorder.none,
             hintText: "Title...",
@@ -253,6 +338,7 @@ class _ScriptCreatePageState extends State<ScriptCreatePage> {
           focusNode: _titleFocusNode,
         ),
       );
+      _addBody("text");
     }
     return Scaffold(
       drawer: Drawer(),
@@ -260,8 +346,6 @@ class _ScriptCreatePageState extends State<ScriptCreatePage> {
         tooltip: "Add a body element",
         onPressed: () {
           _addBodyBottomSheet(context);
-//          addBody(_bodyIndex, "image", ImageSource.camera);
-//          _bodyIndex++;
         },
         child: Icon(Icons.add),
         backgroundColor: Colors.grey.shade900.withOpacity(.8),
@@ -283,19 +367,6 @@ class _ScriptCreatePageState extends State<ScriptCreatePage> {
               children: _scriptStructure,
             ),
           ),
-//          _lastText != null && _lastText
-//              ? Container(height: 0)
-//              : Container(
-//                  height: 64,
-//                  child: RawMaterialButton(
-//                    onPressed: () {
-//                      addBody(_bodyIndex, "image", ImageSource.camera);
-//                      _bodyIndex++;
-//                    },
-//                    child: Icon(Icons.add, size: 32),
-//                    fillColor: Colors.grey.shade50.withOpacity(0.8),
-//                  ),
-//                ),
         ],
       ),
     );

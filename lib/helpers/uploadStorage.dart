@@ -10,7 +10,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 /// [contentType] The mime content type of the file.
 /// [metadata] The associated metadata for the file to be uploaded.
 Future<String> upload(File file, String path, String name, String contentType,
-    Map metadata) async {
+    Map<String, String> metadata) async {
   final StorageReference ref =
       FirebaseStorage.instance.ref().child(path).child(name);
   final StorageUploadTask uploadTask = ref.putFile(
@@ -21,6 +21,6 @@ Future<String> upload(File file, String path, String name, String contentType,
     ),
   );
   StorageTaskSnapshot storageTaskSnapshot = await uploadTask.onComplete;
-  String downloadUrl = await storageTaskSnapshot.ref.getDownloadURL();
-  return downloadUrl;
+  String publicUrl = await storageTaskSnapshot.ref.getDownloadURL();
+  return publicUrl;
 }
