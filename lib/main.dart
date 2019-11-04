@@ -1,11 +1,12 @@
 import 'package:avail/pages/auth-page.dart';
 import "package:avail/pages/depiction-page.dart";
 import "package:avail/pages/home-page.dart";
-import 'package:avail/pages/script-create-options-page.dart';
-import 'package:avail/pages/script-create-page.dart';
-import "package:avail/pages/script-page.dart";
-import 'package:avail/pages/script-drafts-page.dart';
+import 'package:avail/pages/script/script-options-page.dart';
+import 'package:avail/pages/script/script-create-page.dart';
+import 'package:avail/pages/script/script-page.dart';
+import 'package:avail/pages/script/script-drafts-page.dart';
 import "package:avail/pages/sound-page.dart";
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import "package:flutter/cupertino.dart";
 import "package:flutter/material.dart";
@@ -36,11 +37,13 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _authStateListener() async {
+    print("Inside authstatelistener");
     FirebaseAuth.instance.onAuthStateChanged.listen(
       (FirebaseUser userObject) async {
         signedIn = userObject != null ? true : false;
+        print("Signedin: $signedIn");
         user = signedIn ? userObject : null;
-        setState(() {});
+        if (mounted) setState(() {});
         if (signedIn) {
           getUserData();
         }
@@ -50,10 +53,17 @@ class _MyAppState extends State<MyApp> {
 
   void getUserData() async {
     if (user.uid == null) {
+      print("uid is null");
       return;
     }
-    setState(() {});
-    // Implement user details updating
+    try {
+      DocumentSnapshot snapshot =
+          await Firestore.instance.collection("user").document(user.uid).get();
+      userData = snapshot.data;
+    } catch (error) {
+      print("User data error: ${error.message}");
+    }
+    if (mounted) setState(() {});
   }
 
   @override
@@ -124,18 +134,28 @@ class _MyAppState extends State<MyApp> {
       ),
       routes: {
         "/": (context) => HomePage(
-          user: user,
-          signedIn: signedIn,
-          signOut: _signOut,
-          userData: userData,
-        ),
+              user: user,
+              signedIn: signedIn,
+              signOut: _signOut,
+              userData: userData,
+            ),
         "/auth": (context) => AuthPage(),
         "/sound": (context) => SoundPage(),
         "/depiction": (context) => DepictionPage(),
         "/script": (context) => ScriptPage(),
-        "/script/options": (context) => ScriptCreateOptionsPage(),
+        "/script/options": (context) => ScriptCreateOptionsPage(
+              user: user,
+              signedIn: signedIn,
+              signOut: _signOut,
+              userData: userData,
+            ),
         "/script/drafts": (context) => ScriptDraftsPage(),
-        "/script/create": (context) => ScriptCreatePage(),
+        "/script/create": (context) => ScriptCreatePage(
+          user: user,
+          signedIn: signedIn,
+//          signOut: _signOut,
+//          userData: userData,
+        ),
       },
     );
   }

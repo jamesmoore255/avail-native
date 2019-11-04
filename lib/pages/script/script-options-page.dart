@@ -1,21 +1,26 @@
-import "package:avail/shared/filter-chip-bar.dart";
-import "package:avail/shared/menu-drawer.dart";
+import 'package:firebase_auth/firebase_auth.dart';
 import "package:flutter/cupertino.dart";
 import "package:flutter/material.dart";
 import "package:cloud_firestore/cloud_firestore.dart";
 
+import "../../shared/filter-chip-bar.dart";
+import "../../shared/menu-drawer.dart";
+import '../auth-page.dart';
+
 final databaseReference = Firestore.instance;
 
 class ScriptCreateOptionsPage extends StatefulWidget {
-  ScriptCreateOptionsPage({
-    Key key,
-    this.user,
-    this.signedIn = true,
-  }) : super(key: key);
-
-  /// FirebaseUser type
-  final String user;
+  ScriptCreateOptionsPage(
+      {Key key,
+      @required this.signedIn,
+      @required this.signOut,
+      @required this.user,
+      @required this.userData})
+      : super(key: key);
   final bool signedIn;
+  final GestureTapCallback signOut;
+  final FirebaseUser user;
+  final Map<String, dynamic> userData;
 
   @override
   _ScriptCreateOptionsPageState createState() =>
@@ -23,10 +28,10 @@ class ScriptCreateOptionsPage extends StatefulWidget {
 }
 
 class _ScriptCreateOptionsPageState extends State<ScriptCreateOptionsPage> {
+  bool signedIn = false;
   Divider verticalSpacer = Divider(height: 16);
 
-  @override
-  Widget build(BuildContext context) {
+  scriptOptionsContents() {
     return Scaffold(
       drawer: Drawer(),
       body: Column(
@@ -90,6 +95,28 @@ class _ScriptCreateOptionsPageState extends State<ScriptCreateOptionsPage> {
           ),
         ],
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.signedIn != signedIn) {
+      setState(() {
+        signedIn = widget.signedIn;
+      });
+    }
+    return IndexedStack(
+      index: signedIn ? 0 : 1,
+      children: <Widget>[
+        Container(
+          child: scriptOptionsContents(),
+        ),
+        AnimatedOpacity(
+          child: AuthPage(),
+          opacity: signedIn ? 0 : 1,
+          duration: Duration(milliseconds: 500),
+        ),
+      ],
     );
   }
 }
